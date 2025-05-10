@@ -1,0 +1,96 @@
+# .gitlab-ci.yml
+
+# Use an official Node.js image.
+# Choose a version compatible with your project.
+image: node:18 # Or node:20, node:16, etc.
+
+# Define stages for the CI/CD pipeline
+stages:
+  - install       # Install dependencies
+  - test          # Run tests
+  - build         # Build the React application
+  - deploy        # Deploy the application (e.g., to GitLab Pages)
+
+# Cache node_modules to speed up subsequent pipelines
+cache:
+  key:
+    files:
+      - package-lock.json # or yarn.lock if using yarn
+  paths:
+    - node_modules/
+  policy: pull-push # Pull cache at the start, push at the end if job succeeds
+
+# Job to install dependencies
+install_dependencies:
+  stage: install
+  script:
+    - echo "Installing dependencies..."
+    - npm install
+  # No need to define node_modules as an artifact here if using cache globally
+  # and subsequent jobs in different stages will also pull the cache.
+
+# Job to run tests
+run_tests:
+  stage: test
+  script:
+    - echo "Running tests..."
+    - npm test
+  needs: # Ensures install_dependencies completes successfully before this job runs
+    - job: install_dependencies
+      optional: false # Make it mandatory for cache to be effective if policy is pull
+
+# Job to build the application
+build_application:
+  stage: build
+  script:
+    - echo "Building the application..."
+    - npm run build
+  artifacts:
+    paths:
+      - build/ # Assuming your build output is in the 'build' folder
+    expire_in: 1 week # How long to keep the artifacts
+  needs:
+    - job: install_dependencies # Can also depend on install_dependencies for cache
+      optional: false
+
+# Job to deploy to GitLab Pages
+# This job is special and its name 'pages' triggers GitLab Pages deployment.
+pages:
+  stage: deploy
+  script:
+    - echo "Deploying to GitLab Pages..."
+    # GitLab Pages expects content in a 'public' directory.
+    # If your build output is in 'build/', you need to move it.
+    - rm -rf public # Remove any existing public folder
+    - mv build public # Move the 'build' folder to 'public'
+    # Optional: If your app is not at the root of the GitLab Pages site
+    # (e.g., username.gitlab.io/project-name), you might need to
+    # configure publicPath in your React app's build settings (e.g., in package.json or vite.config.js).
+    # Example for Create React App: add "homepage": "/your-project-name" in package.json
+    # then npm run build will use this. No extra step needed here if "homepage" is set.
+    - echo "Application successfully deployed to GitLab Pages."
+  artifacts:
+    paths:
+      - public # This directory will be served by GitLab Pages
+  rules:
+    # Deploy only when changes are pushed/merged to the main/master branch
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+  needs:
+    - job: build_application # Depends on the build_application job completing successfully
+      artifacts: true       # And requires its artifacts
+
+# You can add more deployment jobs here for other environments (staging, production)
+# deploy_production:
+#   stage: deploy
+#   script:
+#     - echo "Deploying to production server..."
+#     # Add your deployment scripts here (e.g., scp, rsync, aws s3 sync)
+#   environment:
+#     name: production
+#     url: https://yourproduction.app.com
+#   rules:
+#     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+#       when: manual # Manual trigger for production deployment
+#   needs:
+#     - job: build_application
+#       artifacts: true
