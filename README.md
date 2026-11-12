@@ -1,70 +1,130 @@
-# Getting Started with Create React App
+# 🛳️ Titanic Survival Prediction Web App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is a containerized AI-powered web application that predicts whether a passenger would have survived the Titanic disaster. Users can tweak input parameters, test multiple ML models, and explore results interactively. 
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## 🚀 About the Project
 
-### `npm start`
+> “Get ready to embark on an exciting journey with our cutting-edge web application, driven by the power of artificial intelligence! Discover if you would have survived the legendary Titanic disaster as you explore and tweak various intriguing parameters. This isn’t just a web app—it’s your gateway to experiencing firsthand the capabilities of AI in a fun and engaging way!”  
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 📦 Repository Structure
 
-### `npm test`
+Main Git repository:  
+🔗 [`docker-compose`](https://mygit.th-deg.de/schober-teaching/student-projects/ain-23-software-engineering/ss-25/Sosyo/docker-compose.git)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Includes the following **submodules**:
+- [`web-frontend`](https://mygit.th-deg.de/schober-teaching/student-projects/ain-23-software-engineering/ss-25/Sosyo/web-frontend.git)
+- [`web-backend`](https://mygit.th-deg.de/schober-teaching/student-projects/ain-23-software-engineering/ss-25/Sosyo/web-backend.git)
+- [`model-backend`](https://mygit.th-deg.de/schober-teaching/student-projects/ain-23-software-engineering/ss-25/Sosyo/model-backend.git)
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 🛠️ Setup Instructions
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 1. Clone the Repositories
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Clone the main repo along with all submodules:
 
-### `npm run eject`
+```bash
+git clone --recurse-submodules https://mygit.th-deg.de/schober-teaching/student-projects/ain-23-software-engineering/ss-25/Sosyo/docker-compose.git
+cd docker-compose
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+> If you forgot to use `--recurse-submodules`, you can initialize them later:
+```bash
+git submodule update --init --recursive
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 2. Start the Application
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Build and run the app using Docker Compose:
 
-## Learn More
+```bash
+docker-compose up -d --build
+docker-compose up
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Once started, visit the app at:  
+📍 **http://localhost:8080**
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
+## 🧪 Testing
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### ✅ Web Frontend – Cypress E2E Tests
 
-### Analyzing the Bundle Size
+E2E Tests will automatically runs with Docker command, but if you want to run it separately then,
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```bash
+docker-compose run --rm cypress
+```
 
-### Making a Progressive Web App
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### ✅ Web Backend – Pytest
 
-### Advanced Configuration
+```bash
+docker-compose run --rm backend pytest
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+---
 
-### Deployment
+### ✅ Model Backend – Pytest
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+```bash
+docker-compose run --rm model-trainer pytest
+```
 
-### `npm run build` fails to minify
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## 🔐 Admin Access
+
+| Role  |        Email        |                          Password                            |
+|-------|---------------------|--------------------------------------------------------------|
+| Admin | sosyo2025@gmail.com | Register with "sosyo2025@gmail.com" and create your password |
+
+
+---
+
+## 💡 Features
+
+- 🔍 Predict Titanic survival using 5 ML models:
+  - Random Forest
+  - Decision Tree
+  - KNN
+  - Support Vector Machines
+  - Logistic Regression
+- 👥 User registration and login
+- 📊 Real-time prediction updates
+- 🔁 Model selection (restricted by user type)
+- 🧠 Admins can train/delete models
+- 📜 History of last 10 predictions (for logged-in users)
+- 🌐 SPA built in **React**
+- 📦 Fully containerized with **Docker**
+- 🌍 Routed via **Nginx reverse proxy**
+- 🧪 Tests run on every commit via **GitLab CI**
+
+---
+
+## 👨‍👩‍👦 Team Members
+
+| Name                          | Matriculation Number |
+|-------------------------------|-----------------------|
+| Jenil Kevadiya                | 22204227              |
+| Krunal Ashvinbhai Koladiya    | 22306168              |
+| Sarthik Ashokbhai Jagani      | 22306164              |
+| Shubham Hareshbhai Mangaroliya| 22306211              |
+| Divyam Kalpeshbhai Maniya     | 22306364              |
+
+---
+
+## 🧾 License
+
+MIT License
+
+---

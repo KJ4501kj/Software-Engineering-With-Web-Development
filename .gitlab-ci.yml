@@ -1,96 +1,79 @@
 # .gitlab-ci.yml
+# This pipeline is already configured to support the new Cypress location.
 
-# Use an official Node.js image.
-# Choose a version compatible with your project.
-image: node:18 # Or node:20, node:16, etc.
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
 
-# Define stages for the CI/CD pipeline
 stages:
-  - install       # Install dependencies
-  - test          # Run tests
-  - build         # Build the React application
-  - deploy        # Deploy the application (e.g., to GitLab Pages)
+  - install
+  - test
+  - build_push
+  - e2e_test
 
-# Cache node_modules to speed up subsequent pipelines
-cache:
-  key:
-    files:
-      - package-lock.json # or yarn.lock if using yarn
-  paths:
-    - node_modules/
-  policy: pull-push # Pull cache at the start, push at the end if job succeeds
-
-# Job to install dependencies
-install_dependencies:
+# --- STAGE: INSTALL ----
+install_frontend_deps:
   stage: install
+  image: node:18
   script:
-    - echo "Installing dependencies..."
+    - cd web-frontend
     - npm install
-  # No need to define node_modules as an artifact here if using cache globally
-  # and subsequent jobs in different stages will also pull the cache.
+  cache:
+    key:
+      files:
+        - web-frontend/package-lock.json
+    paths:
+      - web-frontend/node_modules/
+    policy: pull-push
 
-# Job to run tests
-run_tests:
+# --- STAGE: TEST ----
+run_frontend_tests:
   stage: test
+  image: node:18
   script:
-    - echo "Running tests..."
+    - cd web-frontend
     - npm test
-  needs: # Ensures install_dependencies completes successfully before this job runs
-    - job: install_dependencies
-      optional: false # Make it mandatory for cache to be effective if policy is pull
-
-# Job to build the application
-build_application:
-  stage: build
-  script:
-    - echo "Building the application..."
-    - npm run build
-  artifacts:
-    paths:
-      - build/ # Assuming your build output is in the 'build' folder
-    expire_in: 1 week # How long to keep the artifacts
   needs:
-    - job: install_dependencies # Can also depend on install_dependencies for cache
-      optional: false
+    - job: install_frontend_deps
 
-# Job to deploy to GitLab Pages
-# This job is special and its name 'pages' triggers GitLab Pages deployment.
-pages:
-  stage: deploy
+run_backend_tests:
+  stage: test
+  image: python:3.9-slim
+  before_script:
+    - cd web-backend
+    - pip install -r requirements.txt
   script:
-    - echo "Deploying to GitLab Pages..."
-    # GitLab Pages expects content in a 'public' directory.
-    # If your build output is in 'build/', you need to move it.
-    - rm -rf public # Remove any existing public folder
-    - mv build public # Move the 'build' folder to 'public'
-    # Optional: If your app is not at the root of the GitLab Pages site
-    # (e.g., username.gitlab.io/project-name), you might need to
-    # configure publicPath in your React app's build settings (e.g., in package.json or vite.config.js).
-    # Example for Create React App: add "homepage": "/your-project-name" in package.json
-    # then npm run build will use this. No extra step needed here if "homepage" is set.
-    - echo "Application successfully deployed to GitLab Pages."
-  artifacts:
-    paths:
-      - public # This directory will be served by GitLab Pages
+    - pytest
+
+# --- STAGE: BUILD & PUSH ----
+build_and_push_images:
+  stage: build_push
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - echo "Building frontend image..."
+    - docker build -t $CI_REGISTRY_IMAGE/frontend:latest -f web-frontend/Dockerfile ./web-frontend
+
+    - echo "Building web-backend image..."
+    - docker build -t $CI_REGISTRY_IMAGE/web-backend:latest -f web-backend/Dockerfile ./web-backend
+
+    - echo "Building model-backend image..."
+    - docker build -t $CI_REGISTRY_IMAGE/model-backend:latest -f model-backend/Dockerfile ./model-backend
   rules:
-    # Deploy only when changes are pushed/merged to the main/master branch
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
-  needs:
-    - job: build_application # Depends on the build_application job completing successfully
-      artifacts: true       # And requires its artifacts
+    - if: '$CI_COMMIT_BRANCH == "main"'
 
-# You can add more deployment jobs here for other environments (staging, production)
-# deploy_production:
-#   stage: deploy
-#   script:
-#     - echo "Deploying to production server..."
-#     # Add your deployment scripts here (e.g., scp, rsync, aws s3 sync)
-#   environment:
-#     name: production
-#     url: https://yourproduction.app.com
-#   rules:
-#     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
-#       when: manual # Manual trigger for production deployment
-#   needs:
-#     - job: build_application
-#       artifacts: true
+# --- STAGE: END-TO-END TEST ----
+run_e2e_tests:
+  stage: e2e_test
+  image: cypress/base:18
+  script:
+    # This script is already correct. It changes into the web-frontend directory,
+    # installs dependencies, and then runs Cypress. Cypress will find
+    # the config and tests in their new location within this directory.
+    - cd web-frontend
+    - npm ci
+    - npm run cypress:run
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'

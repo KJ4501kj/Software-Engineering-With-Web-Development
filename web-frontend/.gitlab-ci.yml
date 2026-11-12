@@ -1,0 +1,51 @@
+# This pipeline handles the testing and building of the frontend application.
+
+stages:
+  - install
+  - test
+  - build
+
+# Cache node_modules to speed up jobs
+cache:
+  key:
+    files:
+      - package-lock.json
+  paths:
+    - node_modules/
+  policy: pull-push
+
+# Install npm dependencies
+install_deps:
+  stage: install
+  # UPDATED: Using Node.js v20 to match dependency requirements
+  image: node:20-alpine
+  script:
+    - npm install
+
+# Run unit tests
+run_tests:
+  stage: test
+  # UPDATED: Using Node.js v20 here as well
+  image: node:20-alpine
+  script:
+    # Adding npm install here makes the job more robust
+    - npm install
+    - npm test
+  needs:
+    - job: install_deps
+
+# Build and push the Docker image to the GitLab Registry
+build_image:
+  stage: build
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - echo "Building web-frontend image..."
+    - docker build -t $CI_REGISTRY_IMAGE:latest -f Dockerfile .
+    - docker push $CI_REGISTRY_IMAGE:latest
+  rules:
+    # This job only runs on commits to the 'main' branch of this repository.
+    - if: '$CI_COMMIT_BRANCH == "main"'
